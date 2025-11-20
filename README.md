@@ -23,8 +23,12 @@
 .
 ├── data/                     # 存放由 prepare.py 生成的 .pkl 数据文件
 ├── result/                   # 存放推理和评估结果
-│   ├── answer.jsonl          # rollout.py 生成的模型答案
-│   └── scored_answer.jsonl   # evaluate.py 生成的评分结果
+│   └── AdamW_lr_exp/         # 按实验组织的文件夹
+│       └── lr_1e-06/
+│           ├── answers.jsonl
+│           ├── execution.log
+│           ├── loss_curve.png
+│           └── scored_answers.jsonl
 ├── src/                      # 核心源代码
 │   ├── verifier/             # 数学答案验证模块
 │   │   ├── __init__.py
@@ -33,15 +37,35 @@
 │   ├── prepare.py            # 数据准备脚本
 │   ├── finetune.py           # 模型微调脚本
 │   ├── rollout.py            # 模型推理（生成答案）脚本
-│   └── evaluate.py           # 自动化评估脚本
+│   ├── evaluate.py           # 自动化评估脚本
+│   ├── run_experiments.py    # 自动化实验运行脚本
+│   └── vllm_rollout.py       # (可选) 使用 vLLM 的高速推理脚本
 ├── train_log/                # 存放训练输出
-│   └── out-instruction-tuning/ # 微调后的 LoRA 适配器和训练日志
+│   └── AdamW_lr_exp/         # 按实验组织的文件夹
+│       └── lr_1e-06/
+│           ├── ... (模型文件)
+│           └── training_logs.json
 └── requirements.txt          # 项目依赖
 ```
 
 ## 工作流
 
-### 1. 环境配置
+### 推荐：自动化实验流程
+
+我们强烈推荐使用 `run_experiments.py` 脚本来自动化整个工作流。该脚本会依次执行数据准备、模型微调、推理和评估，并能循环测试多种超参数（如学习率），将每次实验的结果（日志、模型、答案、评估分数）整齐地保存在独立的目录中。
+
+```bash
+# 启动自动化实验流程
+python src/run_experiments.py
+```
+- **工作原理**: 该脚本会调用 `finetune.py`, `rollout.py`, 和 `evaluate.py`，并自动管理文件路径和日志记录。
+- **日志模式**: 你可以在脚本内通过 `LOG_TO_FILE` 变量切换日志模式。`True` 会将所有输出保存到文件，`False` 则在控制台实时显示。
+
+### 手动分步执行
+
+如果你希望手动控制每个步骤，可以按照以下流程操作。
+
+#### 1. 环境配置
 
 首先，请确保你的环境满足要求。建议在虚拟环境中安装依赖。
 
@@ -50,7 +74,7 @@
 pip install -r requirements.txt
 ```
 
-### 2. 数据准备
+#### 2. 数据准备
 
 运行 `prepare.py` 脚本，它会从 Hugging Face Hub 下载 `ricdomolm/MATH-500` 数据集，应用 Chat Template，进行 Tokenize 和格式化，然后将处理好的数据保存到 `data/` 目录下。
 
@@ -59,9 +83,9 @@ python src/prepare.py
 ```
 - **调试模式**: 添加 `--debug` 参数可以在 5% 的数据子集上快速运行，以验证流程。
 
-### 3. 模型微调
+#### 3. 模型微调
 
-运行 `finetune.py` 脚本来启动模型训练。该脚本会加载预处理好的数据，并使用指定的优化器（默认为 AdamW，可通过参数选择 LoRA 或 SGD）对 Qwen-3-0.6B 模型进行微调。
+运行 `finetune.py` 脚本来启动模型训练。该脚本会加载预处理好的数据，并使用指定的优化器（默认为 AdamW，可通过参数选择 LoRA 或 SGD）对模型进行微调。
 
 ```bash
 # 使用 LoRA 进行训练并绘制损失图
@@ -72,33 +96,36 @@ python src/finetune.py --optimization_method lora --plot
   - `--lora_rank`: 当使用 `lora` 时，设置 LoRA 的秩，默认为 8。
   - `--learning_rate`: 设置学习率，默认为 2e-5。
   - `--num_epochs`: 设置训练轮次，默认为 1。
-  - `--plot`: 训练结束后自动生成并显示损失曲线图，并保存到 `result/loss_curve.png`。
-- **输出**: 训练完成后，最佳的模型适配器（或完整模型）和 `training_logs.json` 日志文件将保存在 `train_log/out-instruction-tuning/` 目录下。
+  - `--plot`: 训练结束后自动生成并保存损失曲线图。
+- **输出**: 训练完成后，最佳的模型适配器（或完整模型）和 `training_logs.json` 日志文件（包含训练时间）将保存在指定的输出目录中。
 
-### 4. 模型推理
+#### 4. 模型推理
 
-训练完成后，运行 `rollout.py` 脚本，它会加载基础模型和微调好的 LoRA 适配器，在 MATH-500 测试集上生成答案。
+训练完成后，运行 `rollout.py` 脚本，它会加载基础模型和微调好的模型，在 MATH-500 测试集上生成答案。
 
 ```bash
-python src/rollout.py
+# 需要指定模型路径和输出文件
+python src/rollout.py --lora_path "path/to/your/model" --output_file "result/answers.jsonl"
 ```
-- **工作原理**: 该脚本将基础模型与 LoRA 权重合并，然后在测试集上进行批量推理。
-- **输出**: 推理结果（包含问题、模型答案、标准答案）将以 JSONL 格式保存在 `result/answer.jsonl` 文件中。
+- **性能优化**: 该脚本已通过 `attn_implementation="flash_attention_2"` 进行了优化，以加速推理过程。
+- **输出**: 推理结果（包含问题、模型答案、标准答案）将以 JSONL 格式保存在指定的输出文件中。
 
-### 5. 自动化评估
+#### 5. 自动化评估
 
 最后，运行 `evaluate.py` 脚本来评估模型的性能。
 
 ```bash
-python src/evaluate.py
+# 需要指定输入和输出文件
+python src/evaluate.py --input_file "result/answers.jsonl" --output_file "result/scored_answers.jsonl"
 ```
-- **工作原理**: 该脚本会读取 `result/answer.jsonl`，并调用 `verifier` 模块对每一条答案进行评分。
-- **输出**: 包含分数和标准化答案的详细评估结果将保存在 `result/scored_answer.jsonl` 中，并在控制台打印最终的准确率。
+- **工作原理**: 该脚本会读取 `answers.jsonl`，并调用 `verifier` 模块对每一条答案进行评分。
+- **输出**: 包含分数和标准化答案的详细评估结果将保存在指定的输出文件中，并在控制台打印最终的准确率。
 
 ## 核心模块详解
 
-- **`src/prepare.py`**: 负责数据处理。它将原始的问答对转换成 Qwen 模型可以理解的 ChatML 格式，并对 prompt 和 response 进行恰当的 Tokenize 和标签化（labeling），其中 prompt 部分的损失在训练中会被忽略。
-- **`src/finetune.py`**: 核心训练脚本。它集成了 `torch`、`transformers` 和 `peft`，实现了完整的训练、验证和保存逻辑。
-- **`src/rollout.py`**: 推理脚本。演示了如何加载 LoRA 适配器并进行批量推理，生成用于评估的答案。
+- **`src/run_experiments.py`**: **（推荐使用）** 自动化实验的核心脚本。它串联了 `finetune`、`rollout` 和 `evaluate` 的所有步骤，能够自动管理文件路径、循环测试不同超参数，并将每次实验的结果清晰地组织在独立的目录中。
+- **`src/prepare.py`**: 负责数据处理。它将原始的问答对转换成模型可以理解的 ChatML 格式，并对 prompt 和 response 进行恰当的 Tokenize 和标签化（labeling），其中 prompt 部分的损失在训练中会被忽略。
+- **`src/finetune.py`**: 核心训练脚本。它集成了 `torch`、`transformers` 和 `peft`，实现了完整的训练、验证和保存逻辑。现在它还会记录总训练时间。
+- **`src/rollout.py`**: 推理脚本。演示了如何加载微调后的模型并进行批量推理。该脚本已通过 **Flash Attention 2** 进行了性能优化。
 - **`src/evaluate.py`**: 评估脚本。它连接了推理输出和评分模块，实现了自动化的端到端评估。
 - **`src/verifier/`**: 项目的亮点之一。该模块提供了强大的数学答案评分能力，其逻辑借鉴了多个业界领先的开源项目（如 Hendrycks' MATH、ToRA、PRM800K），能够准确判断各种形式的数学答案是否正确。

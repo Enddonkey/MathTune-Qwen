@@ -66,32 +66,44 @@ def main(model_name, output_filename, lora_path=None):
         for chat in prompt_chats
     ]
 
-    # 3. Create Transformers Model with conditional LoRA support
-    print(f"Loading base model: {model_name}")
-    
-    # The inference speed will be significantly slower if we use float32 here.
+    # 3. Load Model (handles base, full fine-tuned, and LoRA)
     dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float16
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        trust_remote_code=True,
-        torch_dtype=dtype,
-        device_map="auto"  # Automatically maps the model to available GPUs
-    )
-
-    if lora_path:
-        print(f"LoRA adapter specified. Loading from local path: {lora_path}")
-        
-        # Validate that the path is a valid directory
-        if not os.path.isdir(lora_path):
-            raise ValueError(f"LoRA path '{lora_path}' is not a valid directory.")
-            
-        # Load the LoRA adapter and merge it into the base model
-        model = PeftModel.from_pretrained(model, lora_path)
-        model = model.merge_and_unload()
-        print("Successfully merged LoRA adapter into the base model.")
-    else:
-        print("No LoRA adapter specified, running the base model.")
     
+    if lora_path:
+        # Check if the path contains a LoRA adapter or a full model
+        adapter_config_path = os.path.join(lora_path, "adapter_config.json")
+        if os.path.exists(adapter_config_path):
+            # It's a LoRA adapter
+            print(f"LoRA adapter detected. Loading base model '{model_name}' and merging adapter from '{lora_path}'")
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                trust_remote_code=True,
+                torch_dtype=dtype,
+                device_map="auto",
+            )
+            model = PeftModel.from_pretrained(model, lora_path)
+            model = model.merge_and_unload()
+            print("Successfully merged LoRA adapter.")
+        else:
+            # It's a full fine-tuned model
+            print(f"No LoRA adapter found. Loading full fine-tuned model from path: {lora_path}")
+            model = AutoModelForCausalLM.from_pretrained(
+                lora_path,
+                trust_remote_code=True,
+                torch_dtype=dtype,
+                device_map="auto",
+            )
+            print("Successfully loaded full model.")
+    else:
+        # No path specified, load the base model
+        print(f"No model path specified. Loading base model: {model_name}")
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            trust_remote_code=True,
+            torch_dtype=dtype,
+            device_map="auto",
+        )
+        print("Successfully loaded base model.")
     model.eval() # Set the model to evaluation mode
 
     # Generation parameters (equivalent to vLLM's SamplingParams)

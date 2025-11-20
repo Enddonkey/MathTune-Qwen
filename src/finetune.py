@@ -2,6 +2,7 @@ import os
 import pickle
 import argparse
 import json
+import time
 from tqdm import tqdm
 
 import torch
@@ -43,8 +44,8 @@ def get_args():
     parser.add_argument('--weight_decay', type=float, default=0.01, help='Weight decay for the optimizer.')
     parser.add_argument('--beta1', type=float, default=0.9, help='AdamW optimizer beta1.')
     parser.add_argument('--beta2', type=float, default=0.95, help='AdamW optimizer beta2.')
-    parser.add_argument('--batch_size', type=int, default=2, help='Batch size for training and validation.')
-    parser.add_argument('--grad_accumulation_steps', type=int, default=4, help='Number of steps to accumulate gradients.')
+    parser.add_argument('--batch_size', type=int, default=4, help='Batch size for training and validation.')
+    parser.add_argument('--grad_accumulation_steps', type=int, default=16, help='Number of steps to accumulate gradients.')
 
     # Logging and Evaluation
     parser.add_argument('--log_interval', type=int, default=10, help='Log training loss every N steps.')
@@ -111,12 +112,13 @@ def init_json_log(log_path, args):
         'step': [],
         'train_loss': [],
         'val_loss': [],
-        'val_step': []
+        'val_step': [],
+        'training_time': None
     }
     with open(log_path, 'w', encoding='utf-8') as f:
         json.dump(log_data, f, indent=2)
 
-def update_json_log(log_path, step=None, train_loss=None, val_loss=None, val_step=None):
+def update_json_log(log_path, step=None, train_loss=None, val_loss=None, val_step=None, training_time=None):
     """Updates the JSON log file."""
     with open(log_path, 'r', encoding='utf-8') as f:
         log_data = json.load(f)
@@ -129,6 +131,8 @@ def update_json_log(log_path, step=None, train_loss=None, val_loss=None, val_ste
         log_data['val_loss'].append(round(val_loss, 4))
     if val_step is not None:
         log_data['val_step'].append(val_step)
+    if training_time is not None:
+        log_data['training_time'] = f"{training_time:.2f}s"
     
     with open(log_path, 'w', encoding='utf-8') as f:
         json.dump(log_data, f, indent=2)
@@ -165,9 +169,10 @@ def plot_loss(log_path, save_plot_path, optimization_method, num_epochs):
     
     plt.savefig(save_plot_path, dpi=300)
     print(f"\nLoss curve saved to: {save_plot_path}")
-    plt.show()
+    # plt.show()
 
 def main():
+    start_time = time.time()
     args = get_args()
 
     # Derived paths
@@ -323,6 +328,12 @@ def main():
         print(f"  -> An earlier checkpoint was better (Val Loss: {best_val_loss:.4f}). Final model not saved.")
 
     print(f"\nProcess complete. Best model is saved in {output_dir}")
+
+    # Log total training time
+    end_time = time.time()
+    total_training_time = end_time - start_time
+    update_json_log(log_path, training_time=total_training_time)
+    print(f"Total training time: {total_training_time:.2f} seconds")
 
     if args.plot:
         plot_log_path = args.log_path_plot if args.log_path_plot else log_path
