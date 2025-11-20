@@ -14,7 +14,7 @@ def run_experiment():
     LOG_TO_FILE = True
 
     learning_rates = [1e-6, 5e-6, 1e-5, 5e-5, 1e-4]
-    num_epochs = 1
+    num_epochs = 5
 
     # --- Path Setup ---
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -61,8 +61,6 @@ def run_experiment():
                 "--num_epochs", str(num_epochs),
                 "--output_dir", model_output_dir,
                 "--save_plot_path", os.path.join(result_output_dir, "loss_curve.png"),
-                "--log_interval", "1",
-                "--eval_interval", "1",
                 "--plot"
             ]
             subprocess.run(finetune_command, check=True, stdout=output_stream, stderr=output_stream)
