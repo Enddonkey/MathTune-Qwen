@@ -113,12 +113,13 @@ def init_json_log(log_path, args):
         'train_loss': [],
         'val_loss': [],
         'val_step': [],
-        'training_time': None
+        'training_time': None,
+        'max_memory_allocated_gb': None
     }
     with open(log_path, 'w', encoding='utf-8') as f:
         json.dump(log_data, f, indent=2)
 
-def update_json_log(log_path, step=None, train_loss=None, val_loss=None, val_step=None, training_time=None):
+def update_json_log(log_path, step=None, train_loss=None, val_loss=None, val_step=None, training_time=None, max_memory_gb=None):
     """Updates the JSON log file."""
     with open(log_path, 'r', encoding='utf-8') as f:
         log_data = json.load(f)
@@ -133,6 +134,8 @@ def update_json_log(log_path, step=None, train_loss=None, val_loss=None, val_ste
         log_data['val_step'].append(val_step)
     if training_time is not None:
         log_data['training_time'] = f"{training_time:.2f}s"
+    if max_memory_gb is not None:
+        log_data['max_memory_allocated_gb'] = round(max_memory_gb, 2)
     
     with open(log_path, 'w', encoding='utf-8') as f:
         json.dump(log_data, f, indent=2)
@@ -264,6 +267,8 @@ def main():
         raise ValueError(f"Unknown optimization_method: {args.optimization_method}")
 
     print("Starting training...")
+    if device == "cuda":
+        torch.cuda.reset_peak_memory_stats()
     best_val_loss = float('inf')
     global_step = 0
     if not os.path.exists(output_dir):
@@ -329,11 +334,18 @@ def main():
 
     print(f"\nProcess complete. Best model is saved in {output_dir}")
 
-    # Log total training time
+    # Log total training time and memory usage
     end_time = time.time()
     total_training_time = end_time - start_time
-    update_json_log(log_path, training_time=total_training_time)
     print(f"Total training time: {total_training_time:.2f} seconds")
+
+    max_memory_gb = None
+    if device == "cuda":
+        max_memory_bytes = torch.cuda.max_memory_allocated()
+        max_memory_gb = max_memory_bytes / (1024 ** 3)
+        print(f"Peak GPU memory allocated: {max_memory_gb:.2f} GB")
+
+    update_json_log(log_path, training_time=total_training_time, max_memory_gb=max_memory_gb)
 
     if args.plot:
         plot_log_path = args.log_path_plot if args.log_path_plot else log_path
