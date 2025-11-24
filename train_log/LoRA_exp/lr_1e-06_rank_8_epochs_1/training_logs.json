@@ -1,0 +1,73 @@
+{
+  "args": {
+    "model_name": "C:\\Users\\Administrator\\.cache\\modelscope\\hub\\models\\Qwen\\Qwen3-0___6B-Base",
+    "data_dir": "../data",
+    "output_dir": "D:\\Classes\\Machine Learning\\Project\\p2\\src\\../train_log/LoRA_exp\\lr_1e-06_rank_8_epochs_1",
+    "num_epochs": 1,
+    "learning_rate": 1e-06,
+    "weight_decay": 0.01,
+    "beta1": 0.9,
+    "beta2": 0.95,
+    "batch_size": 4,
+    "grad_accumulation_steps": 16,
+    "log_interval": 10,
+    "eval_interval": 20,
+    "optimization_method": "lora",
+    "lora_rank": 8,
+    "plot": true,
+    "log_path_plot": null,
+    "save_plot_path": "D:\\Classes\\Machine Learning\\Project\\p2\\src\\../result/LoRA_exp\\lr_1e-06_rank_8_epochs_1\\loss_curve.png"
+  },
+  "step": [
+    10,
+    20,
+    30,
+    40,
+    50,
+    60,
+    70,
+    80,
+    90,
+    100,
+    110,
+    120,
+    130,
+    140
+  ],
+  "train_loss": [
+    0.742,
+    1.1562,
+    0.7599,
+    0.7392,
+    0.8308,
+    1.0958,
+    0.6127,
+    0.9584,
+    1.1989,
+    0.9282,
+    0.8183,
+    1.0072,
+    1.0979,
+    0.9241
+  ],
+  "val_loss": [
+    0.954,
+    0.951,
+    0.9465,
+    0.9415,
+    0.9348,
+    0.928,
+    0.9209
+  ],
+  "val_step": [
+    20,
+    40,
+    60,
+    80,
+    100,
+    120,
+    140
+  ],
+  "training_time": "773.64s",
+  "max_memory_allocated_gb": 10.46
+}

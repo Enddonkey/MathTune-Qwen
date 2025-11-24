@@ -1,0 +1,73 @@
+{
+  "args": {
+    "model_name": "C:\\Users\\Administrator\\.cache\\modelscope\\hub\\models\\Qwen\\Qwen3-0___6B-Base",
+    "data_dir": "../data",
+    "output_dir": "D:\\Classes\\Machine Learning\\Project\\p2\\src\\../train_log/AdamW_exp\\lr_1e-06_epochs_1",
+    "num_epochs": 1,
+    "learning_rate": 1e-06,
+    "weight_decay": 0.01,
+    "beta1": 0.9,
+    "beta2": 0.95,
+    "batch_size": 4,
+    "grad_accumulation_steps": 16,
+    "log_interval": 10,
+    "eval_interval": 20,
+    "optimization_method": "adam",
+    "lora_rank": 8,
+    "plot": true,
+    "log_path_plot": null,
+    "save_plot_path": "D:\\Classes\\Machine Learning\\Project\\p2\\src\\../result/AdamW_exp\\lr_1e-06_epochs_1\\loss_curve.png"
+  },
+  "step": [
+    10,
+    20,
+    30,
+    40,
+    50,
+    60,
+    70,
+    80,
+    90,
+    100,
+    110,
+    120,
+    130,
+    140
+  ],
+  "train_loss": [
+    0.8977,
+    0.9894,
+    1.2924,
+    0.864,
+    0.9316,
+    1.0688,
+    1.0384,
+    1.1173,
+    0.7136,
+    0.8604,
+    0.4699,
+    0.8787,
+    0.7572,
+    0.9046
+  ],
+  "val_loss": [
+    0.9351,
+    0.9187,
+    0.9042,
+    0.8918,
+    0.8813,
+    0.8724,
+    0.8653
+  ],
+  "val_step": [
+    20,
+    40,
+    60,
+    80,
+    100,
+    120,
+    140
+  ],
+  "training_time": "610.58s",
+  "max_memory_allocated_gb": 13.24
+}
