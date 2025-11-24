@@ -49,7 +49,7 @@ def get_args():
 
     # Logging and Evaluation
     parser.add_argument('--log_interval', type=int, default=10, help='Log training loss every N steps.')
-    parser.add_argument('--eval_interval', type=int, default=50, help='Run validation every N steps.')
+    parser.add_argument('--eval_interval', type=int, default=20, help='Run validation every N steps.')
 
     # Optimization method
     parser.add_argument('--optimization_method', type=str, default='adam', choices=['adam', 'sgd', 'lora'], help='Optimization method to use.')

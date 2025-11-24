@@ -18,14 +18,14 @@ def run_experiment():
 
     # --- Path Setup ---
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    base_train_log_dir = os.path.join(script_dir, "../train_log/AdamW_exp")
-    base_result_dir = os.path.join(script_dir, "../result/AdamW_exp")
+    base_train_log_dir = os.path.join(script_dir, "../train_log/SGD_exp")
+    base_result_dir = os.path.join(script_dir, "../result/SGD_exp")
     
     finetune_script_path = os.path.join(script_dir, "finetune.py")
     rollout_script_path = os.path.join(script_dir, "rollout.py")
     evaluate_script_path = os.path.join(script_dir, "evaluate.py")
 
-    print("Starting batch experiment for AdamW with different learning rates and epochs...")
+    print("Starting batch experiment for SGD with different learning rates and epochs...")
     print(f"Logging mode: {'File' if LOG_TO_FILE else 'Console'}")
     print(f"Learning rates to be tested: {learning_rates}")
     print(f"Epochs to be tested: {num_epochs_list}")
@@ -59,7 +59,7 @@ def run_experiment():
                 print("[STEP 1/3] Starting fine-tuning...")
                 finetune_command = [
                     sys.executable, finetune_script_path,
-                    "--optimization_method", "adam",
+                    "--optimization_method", "sgd",
                     "--learning_rate", str(lr),
                     "--num_epochs", str(num_epochs),
                     "--output_dir", model_output_dir,
