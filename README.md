@@ -1,4 +1,4 @@
-# DDA5001 Final Project - Part II: LLM Finetuning# DDA5001 Final Project - Part II: LLM Finetuning
+# DDA5001 Final Project - Part II: LLM Finetuning
 
 
 
